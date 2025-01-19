@@ -28,23 +28,32 @@ variable "upload_photo_trigger_name" {
 
 resource "yandex_function" "face_detection_fun" {
     name               = var.face_detection_fun_name
-    entrypoint         = "face_detection.handler"
+    entrypoint         = "index.handler"
     runtime            = "python312"
     user_hash          = data.archive_file.face_detection.output_sha256
     memory             = 128
     execution_timeout  = 30
     service_account_id = yandex_iam_service_account.sa_face_recognizer.id
+    environment = {
+        PHOTOS_BUCKET     = yandex_storage_bucket.photos_bucket.bucket
+        MESSAGE_QUEUE_URL = yandex_message_queue.tasks_queue.id
+        ACCESS_KEY        = yandex_iam_service_account_static_access_key.sa_face_recognizer_static_key.access_key
+        SECRET_KEY        = yandex_iam_service_account_static_access_key.sa_face_recognizer_static_key.secret_key
+    }
     content {
         zip_filename = data.archive_file.face_detection.output_path
+    }
+    mounts {
+        name = yandex_storage_bucket.photos_bucket.bucket
+        mode = "ro"
+        object_storage {
+            bucket = yandex_storage_bucket.photos_bucket.bucket
+        }
     }
 }
 
 resource "yandex_storage_bucket" "photos_bucket" {
     bucket = var.photos_bucket_name
-}
-
-resource "yandex_iam_service_account_static_access_key" "sa_face_recognizer_static_key" {
-    service_account_id = yandex_iam_service_account.sa_face_recognizer.id
 }
 
 resource "yandex_message_queue" "tasks_queue" {
@@ -60,7 +69,7 @@ resource "yandex_function_trigger" "upload_photo_trigger" {
         bucket_id    = yandex_storage_bucket.photos_bucket.id
         suffix       = ".jpg"
         create       = true
-        batch_cutoff = 1 # Дефолтное значение в соответствии с документацией
+        batch_cutoff = 0
     }
     function {
         id                 = yandex_function.face_detection_fun.id
@@ -78,6 +87,12 @@ resource "yandex_resourcemanager_folder_iam_member" "sa_face_recognizer_ymq_writ
     folder_id = var.folder_id
     role      = "ymq.writer"
     member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"
+}
+
+resource "yandex_resourcemanager_folder_iam_member" "sa_face_recognizer_function_invoker_role" {
+  folder_id = var.folder_id
+  role      = "functions.functionInvoker"
+  member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"
 }
 
 # ZIP-архив

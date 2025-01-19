@@ -64,3 +64,7 @@ provider "telegram" {
 resource "yandex_iam_service_account" "sa_face_recognizer" {
     name = var.sa_name
 }
+
+resource "yandex_iam_service_account_static_access_key" "sa_face_recognizer_static_key" {
+    service_account_id = yandex_iam_service_account.sa_face_recognizer.id
+}
