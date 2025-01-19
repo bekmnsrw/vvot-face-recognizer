@@ -1,9 +1,10 @@
 from json import loads
-from api.telegram import send_message, send_photo
+from pathlib import Path
+from api.telegram import send_message, send_photo, send_photos
 from api.yandex_cloud import get_unrecognized_face, get_original_photos_with, get_face_by_id, update_metadata
 from util.constants import GET_FACE, FIND
 from util.constants import ERROR_MESSAGE, NO_UNRECOGNIZED_FACES_MESSAGE, NO_PHOTOS_WITH
-from util.environment import API_GW_URL, FACES_BUCKET
+from util.environment import API_GW_URL, FACES_BUCKET, PHOTOS_BUCKET, STORAGE_PREFIX
 from util.metadata import set_photo_uid, set_person_name
 
 def handler(event, context):
@@ -50,7 +51,10 @@ def handle_message(message):
             send_message(f"{NO_PHOTOS_WITH} {name}")
             return
     
-        # TODO: Отправить все фотографии с `name` как альбом
+        send_photos(
+            paths=[Path(STORAGE_PREFIX, PHOTOS_BUCKET, original) for original in original_photos_with],
+            message=message,
+        )
     
     # Пользователь отправил неподдерживаемую ботом команду
     else:
