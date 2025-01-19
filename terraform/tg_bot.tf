@@ -15,7 +15,7 @@ resource "yandex_function" "tg_bot_fun" {
     user_hash          = data.archive_file.tg_bot.output_sha256
     memory             = 128
     execution_timeout  = 30
-    service_account_id = yandex_iam_service_account.sa_vvot09_task2.id
+    service_account_id = yandex_iam_service_account.sa_face_recognizer.id
     content {
         zip_filename = data.archive_file.tg_bot.output_path
     }
@@ -28,10 +28,10 @@ resource "telegram_bot_webhook" "tg_bot_webhook" {
     url = "https://functions.yandexcloud.net/${yandex_function.tg_bot_fun.id}"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "sa_vvot09_task2_function_invoker_role" {
+resource "yandex_resourcemanager_folder_iam_member" "sa_face_recognizer_function_invoker_role" {
     folder_id = var.folder_id
     role      = "functions.functionInvoker"
-    member    = "serviceAccount:${yandex_iam_service_account.sa_vvot09_task2.id}"
+    member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"
 }
 
 # ZIP-архив

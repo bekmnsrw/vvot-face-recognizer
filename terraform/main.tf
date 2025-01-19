@@ -18,7 +18,7 @@ variable "tg_bot_key" {
 variable "sa_name" {
     type        = string
     description = "Название сервисного аккаунта"
-    default     = "sa-vvot09-task2"
+    default     = "sa-vvot09-face-recognizer"
 }
 
 variable "sa_key_file_path" {
@@ -61,6 +61,6 @@ provider "telegram" {
 
 # Общие ресурсы
 
-resource "yandex_iam_service_account" "sa_vvot09_task2" {
+resource "yandex_iam_service_account" "sa_face_recognizer" {
     name = var.sa_name
 }
