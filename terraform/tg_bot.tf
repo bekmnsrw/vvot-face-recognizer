@@ -20,6 +20,7 @@ resource "yandex_function" "tg_bot_fun" {
         TG_BOT_KEY    = var.tg_bot_key
         PHOTOS_BUCKET = yandex_storage_bucket.photos_bucket.bucket
         FACES_BUCKET  = yandex_storage_bucket.faces_bucket.bucket
+        API_GW_URL    = "https://${yandex_api_gateway.api_gw.domain}"
     }
     content {
         zip_filename = data.archive_file.tg_bot.output_path
