@@ -51,7 +51,7 @@ resource "telegram_bot_webhook" "tg_bot_webhook" {
     url = "https://functions.yandexcloud.net/${yandex_function.tg_bot_fun.id}"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "sa_face_recognizer_storage_editor_role" {
+resource "yandex_resourcemanager_folder_iam_member" "sa_bot_storage_editor_role" {
     folder_id = var.folder_id
     role      = "storage.editor"
     member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"

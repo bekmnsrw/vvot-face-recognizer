@@ -71,19 +71,19 @@ resource "yandex_function_trigger" "face_cut_trigger" {
     }
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "sa_face_recognizer_function_invoker_role" {
+resource "yandex_resourcemanager_folder_iam_member" "sa_face_cut_function_invoker_role" {
     folder_id = var.folder_id
     role      = "functions.functionInvoker"
     member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "sa_face_recognizer_storage_editor_role" {
+resource "yandex_resourcemanager_folder_iam_member" "sa_face_cut_storage_editor_role" {
     folder_id = var.folder_id
     role      = "storage.editor"
     member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"
 }
 
-resource "yandex_resourcemanager_folder_iam_member" "sa_face_recognizer_ymq_reader_role" {
+resource "yandex_resourcemanager_folder_iam_member" "sa_face_cut_ymq_reader_role" {
     folder_id = var.folder_id
     role      = "ymq.reader"
     member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"

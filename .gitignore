@@ -244,3 +244,4 @@ terraform.rc
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,terraform,git
+terraform/.terraform.lock.hcl
