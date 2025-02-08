@@ -33,12 +33,12 @@ resource "yandex_function" "face_detection_fun" {
     user_hash          = data.archive_file.face_detection.output_sha256
     memory             = 128
     execution_timeout  = 30
-    service_account_id = yandex_iam_service_account.sa_face_recognizer.id
+    service_account_id = yandex_iam_service_account.sa.id
     environment = {
         PHOTOS_BUCKET     = yandex_storage_bucket.photos_bucket.bucket
         MESSAGE_QUEUE_URL = yandex_message_queue.tasks_queue.id
-        ACCESS_KEY        = yandex_iam_service_account_static_access_key.sa_face_recognizer_static_key.access_key
-        SECRET_KEY        = yandex_iam_service_account_static_access_key.sa_face_recognizer_static_key.secret_key
+        ACCESS_KEY        = yandex_iam_service_account_static_access_key.sa_static_key.access_key
+        SECRET_KEY        = yandex_iam_service_account_static_access_key.sa_static_key.secret_key
     }
     content {
         zip_filename = data.archive_file.face_detection.output_path
@@ -53,13 +53,19 @@ resource "yandex_function" "face_detection_fun" {
 }
 
 resource "yandex_storage_bucket" "photos_bucket" {
-    bucket = var.photos_bucket_name
+    bucket        = var.photos_bucket_name
+    acl           = "private"
+    access_key    = yandex_iam_service_account_static_access_key.sa_static_key.access_key
+    secret_key    = yandex_iam_service_account_static_access_key.sa_static_key.secret_key
+    force_destroy = true
 }
 
 resource "yandex_message_queue" "tasks_queue" {
-    name       = var.tasks_queue_name
-    access_key = yandex_iam_service_account_static_access_key.sa_face_recognizer_static_key.access_key
-    secret_key = yandex_iam_service_account_static_access_key.sa_face_recognizer_static_key.secret_key
+    name                       = var.tasks_queue_name
+    access_key                 = yandex_iam_service_account_static_access_key.sa_static_key.access_key
+    secret_key                 = yandex_iam_service_account_static_access_key.sa_static_key.secret_key
+    visibility_timeout_seconds = 600
+    receive_wait_time_seconds  = 20
 }
 
 resource "yandex_function_trigger" "upload_photo_trigger" {
@@ -69,30 +75,14 @@ resource "yandex_function_trigger" "upload_photo_trigger" {
         bucket_id    = yandex_storage_bucket.photos_bucket.id
         suffix       = ".jpg"
         create       = true
-        batch_cutoff = 0
+        batch_cutoff = 3
     }
     function {
         id                 = yandex_function.face_detection_fun.id
-        service_account_id = yandex_iam_service_account.sa_face_recognizer.id
+        service_account_id = yandex_iam_service_account.sa.id
+        retry_attempts     = 3
+        retry_interval     = 20
     }
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "sa_face_recognizer_storage_viewer_role" {
-    folder_id = var.folder_id
-    role      = "storage.viewer"
-    member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "sa_face_recognizer_ymq_writer_role" {
-    folder_id = var.folder_id
-    role      = "ymq.writer"
-    member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "sa_face_recognizer_function_invoker_role" {
-  folder_id = var.folder_id
-  role      = "functions.functionInvoker"
-  member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"
 }
 
 # ZIP-архив

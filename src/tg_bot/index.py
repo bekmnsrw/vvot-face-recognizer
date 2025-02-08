@@ -1,11 +1,16 @@
+import ydb
+import ydb.iam
 from json import loads
-from pathlib import Path
-from api.telegram import send_message, send_photo, send_photos
-from api.yandex_cloud import get_unrecognized_face, get_original_photos_with, get_face_by_id, update_metadata
+from api.telegram import send_message, send_photo
 from util.constants import GET_FACE, FIND
 from util.constants import ERROR_MESSAGE, NO_UNRECOGNIZED_FACES_MESSAGE, NO_PHOTOS_WITH
-from util.environment import API_GW_URL, FACES_BUCKET, PHOTOS_BUCKET, STORAGE_PREFIX
-from util.metadata import set_photo_uid, set_person_name
+from util.environment import API_GW_URL, YDB_ENDPOINT, YDB_PATH
+from api.ydb import get_unrecognized_face_id, get_all_original_photos_with, save_name, get_processing_face_id, set_is_processing
+
+"""
+Docs:
+    - [Yandex Cloud. Connecting to YDB from Cloud Function](https://yandex.cloud/ru/docs/ydb/tutorials/connect-from-cf)
+"""
 
 def handler(event, context):
     update = loads(event["body"])
@@ -21,41 +26,65 @@ def handler(event, context):
 def handle_message(message):
     text = message.get("text")
 
+    db_driver = ydb.Driver(
+        endpoint=f"grpcs://{YDB_ENDPOINT}",
+        database=YDB_PATH,
+        credentials=ydb.iam.MetadataUrlCredentials(),
+    )
+
+    db_driver.wait(fail_fast=True, timeout=30)
+
+    db_client = ydb.TableClient(db_driver)
+    db_session = db_client.session().create()
+
     # Пользователь отправил команду `/getface`
     if text == GET_FACE:
-        unrecognized_face_key = get_unrecognized_face()
-
-        if not unrecognized_face_key:
+        try:
+            unrecognized_face_id = get_unrecognized_face_id(db_session)
+            set_is_processing(db_session, unrecognized_face_id, True)
+            send_photo(f"{API_GW_URL}?face={unrecognized_face_id}", message)
+        except Exception as e:
             send_message(NO_UNRECOGNIZED_FACES_MESSAGE, message)
-            return
         
-        photo_tg_uid = send_photo(f"{API_GW_URL}?face={unrecognized_face_key}", message)
-        update_metadata(FACES_BUCKET, unrecognized_face_key, set_photo_uid, photo_tg_uid)
+        return {
+            "statusCode": 200
+        }
     
     # Пользователь в ответ на фото с лицом человека, полученное после команды `/getface`, отправил текст с именем этого человека
-    elif text and (reply_message := message.get("reply_to_message")):
-        photo_tg_uid = reply_message.get("photo")[-1].get("file_unique_id")
+    elif text and (not text.startswith("/")):
+        try:
+            face_id = get_processing_face_id(db_session)
+            save_name(db_session, text, face_id)
+            set_is_processing(db_session, face_id, False)
+        except Exception as e:
+            send_message("qwerty", message)
 
-        if not photo_tg_uid:
-            return
-        
-        face = get_face_by_id(photo_tg_uid)
-        update_metadata(FACES_BUCKET, face, set_person_name, text)
+        return {
+            "statusCode": 200
+        }
 
     # Пользователь отправил команду `/find xyz`, где `xyz` - имя человека, фотографии с которым нужно найти
     elif text.startswith(FIND):
-        name = text[(len(FIND) + 1):]
-        original_photos_with = get_original_photos_with(name)
+        try:
+            name = text[(len(FIND) + 1):]
+            original_photos_with = get_all_original_photos_with(db_session, name)
 
-        if not original_photos_with:
-            send_message(f"{NO_PHOTOS_WITH} {name}")
-            return
-    
-        send_photos(
-            paths=[Path(STORAGE_PREFIX, PHOTOS_BUCKET, original) for original in original_photos_with],
-            message=message,
-        )
+            if original_photos_with:
+                for original in original_photos_with:
+                    send_photo(f"{API_GW_URL}?original_photo={original}", message)
+            else:
+                send_message(NO_PHOTOS_WITH.format(name), message)
+        except Exception as e:
+            send_message(ERROR_MESSAGE, message)
+        
+        return {
+            "statusCode": 200
+        }
     
     # Пользователь отправил неподдерживаемую ботом команду
     else:
         send_message(ERROR_MESSAGE, message)
+        
+        return {
+            "statusCode": 200
+        }

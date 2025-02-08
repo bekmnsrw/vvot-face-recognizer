@@ -59,12 +59,20 @@ provider "telegram" {
     bot_token = var.tg_bot_key
 }
 
-# Общие ресурсы
+# Сервисный аккаунт с ролью "администратор"
 
-resource "yandex_iam_service_account" "sa_face_recognizer" {
-    name = var.sa_name
+resource "yandex_iam_service_account" "sa" {
+    folder_id = var.folder_id 
+    name      = var.sa_name
 }
 
-resource "yandex_iam_service_account_static_access_key" "sa_face_recognizer_static_key" {
-    service_account_id = yandex_iam_service_account.sa_face_recognizer.id
+resource "yandex_resourcemanager_folder_iam_member" "sa_admin" {
+    folder_id = var.folder_id
+    role      = "admin"
+    member    = "serviceAccount:${yandex_iam_service_account.sa.id}"
+}
+
+resource "yandex_iam_service_account_static_access_key" "sa_static_key" {
+    service_account_id = yandex_iam_service_account.sa.id
+    description        = "Статический ключ доступа к Object Storage"
 }

@@ -30,6 +30,20 @@ resource "yandex_api_gateway" "api_gw" {
                 type: object_storage
                 object: "{face}"
                 bucket: ${yandex_storage_bucket.faces_bucket.bucket}
-                service_account_id: ${yandex_iam_service_account.sa_face_recognizer.id}
+                service_account_id: ${yandex_iam_service_account.sa.id}
+          /original_photo:
+            get:
+              summary: Get original photo
+              parameters:
+                - name: original_photo
+                  in: query
+                  required: true
+                  schema:
+                    type: string
+              x-yc-apigateway-integration:
+                type: object_storage
+                object: "{original_photo}"
+                bucket: ${yandex_storage_bucket.photos_bucket.bucket}
+                service_account_id: ${yandex_iam_service_account.sa.id}      
     EOT
 }

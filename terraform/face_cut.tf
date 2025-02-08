@@ -27,12 +27,14 @@ resource "yandex_function" "face_cut_fun" {
     user_hash          = data.archive_file.face_cut.output_sha256
     memory             = 128
     execution_timeout  = 30
-    service_account_id = yandex_iam_service_account.sa_face_recognizer.id
+    service_account_id = yandex_iam_service_account.sa.id
     environment = {
         PHOTOS_BUCKET = yandex_storage_bucket.photos_bucket.bucket
         FACES_BUCKET  = yandex_storage_bucket.faces_bucket.bucket
-        ACCESS_KEY    = yandex_iam_service_account_static_access_key.sa_face_recognizer_static_key.access_key
-        SECRET_KEY    = yandex_iam_service_account_static_access_key.sa_face_recognizer_static_key.secret_key
+        ACCESS_KEY    = yandex_iam_service_account_static_access_key.sa_static_key.access_key
+        SECRET_KEY    = yandex_iam_service_account_static_access_key.sa_static_key.secret_key
+        YDB_ENDPOINT  = yandex_ydb_database_serverless.database.ydb_api_endpoint
+        YDB_PATH      = yandex_ydb_database_serverless.database.database_path
     }
     content {
         zip_filename = data.archive_file.face_cut.output_path
@@ -54,39 +56,25 @@ resource "yandex_function" "face_cut_fun" {
 }
 
 resource "yandex_storage_bucket" "faces_bucket" {
-    bucket = var.faces_bucket_name
+    bucket        = var.faces_bucket_name
+    acl           = "private"
+    access_key    = yandex_iam_service_account_static_access_key.sa_static_key.access_key
+    secret_key    = yandex_iam_service_account_static_access_key.sa_static_key.secret_key
+    force_destroy = true
 }
 
 resource "yandex_function_trigger" "face_cut_trigger" {
     name = var.face_cut_trigger_name
     message_queue {
         queue_id           = yandex_message_queue.tasks_queue.arn
-        service_account_id = yandex_iam_service_account.sa_face_recognizer.id
-        batch_cutoff       = 0
-        batch_size         = 1
+        service_account_id = yandex_iam_service_account.sa.id
+        batch_cutoff       = "4"
+        batch_size         = "4"
     }
     function {
         id                 = yandex_function.face_cut_fun.id
-        service_account_id = yandex_iam_service_account.sa_face_recognizer.id
+        service_account_id = yandex_iam_service_account.sa.id
     }
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "sa_face_cut_function_invoker_role" {
-    folder_id = var.folder_id
-    role      = "functions.functionInvoker"
-    member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "sa_face_cut_storage_editor_role" {
-    folder_id = var.folder_id
-    role      = "storage.editor"
-    member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "sa_face_cut_ymq_reader_role" {
-    folder_id = var.folder_id
-    role      = "ymq.reader"
-    member    = "serviceAccount:${yandex_iam_service_account.sa_face_recognizer.id}"
 }
 
 # ZIP-архив

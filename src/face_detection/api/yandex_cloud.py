@@ -1,7 +1,7 @@
 import boto3
 from json import dumps
 from util.environment import MESSAGE_QUEUE_URL, ACCESS_KEY, SECRET_KEY
-from util.environment import SERVICE_NAME, ENDPOINT_URL, REGION_NAME
+from util.constants import SERVICE_NAME, ENDPOINT_URL, REGION_NAME
 
 """
 Docs:
