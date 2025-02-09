@@ -57,7 +57,6 @@ resource "yandex_function" "face_cut_fun" {
 
 resource "yandex_storage_bucket" "faces_bucket" {
     bucket        = var.faces_bucket_name
-    acl           = "private"
     access_key    = yandex_iam_service_account_static_access_key.sa_static_key.access_key
     secret_key    = yandex_iam_service_account_static_access_key.sa_static_key.secret_key
     force_destroy = true

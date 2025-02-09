@@ -1,5 +1,6 @@
 import ydb
 import ydb.iam
+import logging
 from json import loads
 from api.telegram import send_message, send_photo
 from util.constants import GET_FACE, FIND
@@ -37,13 +38,20 @@ def handle_message(message):
     db_client = ydb.TableClient(db_driver)
     db_session = db_client.session().create()
 
+    logger = logging.getLogger('simple_example')
+    logger.setLevel(logging.DEBUG)
+
     # Пользователь отправил команду `/getface`
     if text == GET_FACE:
         try:
             unrecognized_face_id = get_unrecognized_face_id(db_session)
+            logger.debug(f"Unrecognized face id: ${unrecognized_face_id}")
             set_is_processing(db_session, unrecognized_face_id, True)
-            send_photo(f"{API_GW_URL}?face={unrecognized_face_id}", message)
+            photo_url = f"{API_GW_URL}?face={unrecognized_face_id}"
+            logger.debug(f"Photo URL: {photo_url}")
+            send_photo(photo_url, message)
         except Exception as e:
+            logger.debug(f"Error: ${e}")
             send_message(NO_UNRECOGNIZED_FACES_MESSAGE, message)
         
         return {
@@ -51,7 +59,7 @@ def handle_message(message):
         }
     
     # Пользователь в ответ на фото с лицом человека, полученное после команды `/getface`, отправил текст с именем этого человека
-    elif text and (not text.startswith("/")):
+    elif text and (not text.startswith("/")) and (message.get("reply_to_message")):
         try:
             face_id = get_processing_face_id(db_session)
             save_name(db_session, text, face_id)
@@ -65,17 +73,14 @@ def handle_message(message):
 
     # Пользователь отправил команду `/find xyz`, где `xyz` - имя человека, фотографии с которым нужно найти
     elif text.startswith(FIND):
-        try:
-            name = text[(len(FIND) + 1):]
-            original_photos_with = get_all_original_photos_with(db_session, name)
+        name = text[(len(FIND) + 1):]
+        original_photos_with = get_all_original_photos_with(db_session, name)
 
-            if original_photos_with:
-                for original in original_photos_with:
-                    send_photo(f"{API_GW_URL}?original_photo={original}", message)
-            else:
-                send_message(NO_PHOTOS_WITH.format(name), message)
-        except Exception as e:
-            send_message(ERROR_MESSAGE, message)
+        if original_photos_with:
+            for original in original_photos_with:
+                send_photo(f"{API_GW_URL}?original_photo={original}", message)
+        else:
+            send_message(NO_PHOTOS_WITH.format(name), message)
         
         return {
             "statusCode": 200

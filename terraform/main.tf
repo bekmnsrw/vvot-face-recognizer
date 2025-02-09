@@ -18,7 +18,7 @@ variable "tg_bot_key" {
 variable "sa_name" {
     type        = string
     description = "Название сервисного аккаунта"
-    default     = "sa-vvot09-face-recognizer"
+    default     = "sa-vvot09-face-recognizer-admin"
 }
 
 variable "sa_key_file_path" {

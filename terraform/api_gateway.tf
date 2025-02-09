@@ -6,7 +6,44 @@ variable "api_gw_name" {
     default     = "vvot09-apigw"
 }
 
+variable "api_gw_fun_name" {
+    type        = string
+    description = "Название функции-обработчика, которая выступает прокси для Yandex API Gateway"
+    default     = "vvot09-apigw-fun"
+}
+
 # Ресурсы
+
+resource "yandex_function" "api_gw_fun" {
+    name               = var.api_gw_fun_name
+    entrypoint         = "index.handler"
+    runtime            = "python312"
+    user_hash          = data.archive_file.api_gw_zip.output_sha256
+    memory             = 128
+    execution_timeout  = 30
+    service_account_id = yandex_iam_service_account.sa.id
+    environment = {
+        PHOTOS_BUCKET = yandex_storage_bucket.photos_bucket.bucket
+        FACES_BUCKET  = yandex_storage_bucket.faces_bucket.bucket
+    }
+    content {
+        zip_filename = data.archive_file.api_gw_zip.output_path
+    }
+    mounts {
+        name = yandex_storage_bucket.photos_bucket.bucket
+        mode = "ro"
+        object_storage {
+            bucket = yandex_storage_bucket.photos_bucket.bucket
+        }
+    }
+    mounts {
+        name = yandex_storage_bucket.faces_bucket.bucket
+        mode = "ro"
+        object_storage {
+            bucket = yandex_storage_bucket.faces_bucket.bucket
+        }
+    }
+}
 
 resource "yandex_api_gateway" "api_gw" {
     name = var.api_gw_name
@@ -27,10 +64,10 @@ resource "yandex_api_gateway" "api_gw" {
                   schema:
                     type: string
               x-yc-apigateway-integration:
-                type: object_storage
-                object: "{face}"
-                bucket: ${yandex_storage_bucket.faces_bucket.bucket}
-                service_account_id: ${yandex_iam_service_account.sa.id}
+                type: cloud_functions
+                tag: $latest
+                function_id: ${yandex_function.api_gw_fun.id}    
+                service_account_id: ${yandex_iam_service_account.sa.id} 
           /original_photo:
             get:
               summary: Get original photo
@@ -41,9 +78,15 @@ resource "yandex_api_gateway" "api_gw" {
                   schema:
                     type: string
               x-yc-apigateway-integration:
-                type: object_storage
-                object: "{original_photo}"
-                bucket: ${yandex_storage_bucket.photos_bucket.bucket}
+                type: cloud_functions
+                tag: $latest
+                function_id: ${yandex_function.api_gw_fun.id}    
                 service_account_id: ${yandex_iam_service_account.sa.id}      
     EOT
+}
+
+data "archive_file" "api_gw_zip" {
+    type        = "zip"
+    source_dir  = "../src/api_gateway"
+    output_path = "../build/api_gateway.zip"
 }

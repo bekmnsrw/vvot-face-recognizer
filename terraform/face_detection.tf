@@ -54,7 +54,6 @@ resource "yandex_function" "face_detection_fun" {
 
 resource "yandex_storage_bucket" "photos_bucket" {
     bucket        = var.photos_bucket_name
-    acl           = "private"
     access_key    = yandex_iam_service_account_static_access_key.sa_static_key.access_key
     secret_key    = yandex_iam_service_account_static_access_key.sa_static_key.secret_key
     force_destroy = true
@@ -64,7 +63,7 @@ resource "yandex_message_queue" "tasks_queue" {
     name                       = var.tasks_queue_name
     access_key                 = yandex_iam_service_account_static_access_key.sa_static_key.access_key
     secret_key                 = yandex_iam_service_account_static_access_key.sa_static_key.secret_key
-    visibility_timeout_seconds = 600
+    visibility_timeout_seconds = 1200
     receive_wait_time_seconds  = 20
 }
 
