@@ -4,12 +4,6 @@ from api.face_detector import get_faces_coordinates
 from util.environment import PHOTOS_BUCKET
 from util.constants import STORAGE_PREFIX
 
-"""
-Docs: 
-    - [Yandex Cloud. Cloud Functions / Object Storage Trigger](https://yandex.cloud/ru/docs/functions/concepts/trigger/os-trigger)
-    - [Yandex Cloud. Message Queue](https://yandex.cloud/en/docs/message-queue/quickstart)
-"""
-
 def handler(event, context):
     original_photo_id = event["messages"][0]["details"]["object_id"]
 

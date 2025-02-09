@@ -7,4 +7,4 @@ FIND = "/find"
 
 ERROR_MESSAGE = "Ошибка. Неизвестная команда"
 NO_UNRECOGNIZED_FACES_MESSAGE = "Нет лиц без указанного имени"
-NO_PHOTOS_WITH = "Нет фотографий с именем `{name}`"
+NO_PHOTOS_WITH = "Нет фотографий с именем"

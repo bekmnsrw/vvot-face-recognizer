@@ -1,17 +1,9 @@
-import ydb
-import ydb.iam
-import logging
 from json import loads
 from api.telegram import send_message, send_photo
 from util.constants import GET_FACE, FIND
 from util.constants import ERROR_MESSAGE, NO_UNRECOGNIZED_FACES_MESSAGE, NO_PHOTOS_WITH
-from util.environment import API_GW_URL, YDB_ENDPOINT, YDB_PATH
-from api.ydb import get_unrecognized_face_id, get_all_original_photos_with, save_name, get_processing_face_id, set_is_processing
-
-"""
-Docs:
-    - [Yandex Cloud. Connecting to YDB from Cloud Function](https://yandex.cloud/ru/docs/ydb/tutorials/connect-from-cf)
-"""
+from util.environment import API_GW_URL
+from api.ydb import get_unrecognized_face_id, get_all_original_photos_with, save_name, get_processing_face_id, set_is_processing, get_db_session
 
 def handler(event, context):
     update = loads(event["body"])
@@ -27,31 +19,16 @@ def handler(event, context):
 def handle_message(message):
     text = message.get("text")
 
-    db_driver = ydb.Driver(
-        endpoint=f"grpcs://{YDB_ENDPOINT}",
-        database=YDB_PATH,
-        credentials=ydb.iam.MetadataUrlCredentials(),
-    )
-
-    db_driver.wait(fail_fast=True, timeout=30)
-
-    db_client = ydb.TableClient(db_driver)
-    db_session = db_client.session().create()
-
-    logger = logging.getLogger('simple_example')
-    logger.setLevel(logging.DEBUG)
+    db_session = get_db_session()
 
     # Пользователь отправил команду `/getface`
     if text == GET_FACE:
         try:
             unrecognized_face_id = get_unrecognized_face_id(db_session)
-            logger.debug(f"Unrecognized face id: ${unrecognized_face_id}")
             set_is_processing(db_session, unrecognized_face_id, True)
             photo_url = f"{API_GW_URL}?face={unrecognized_face_id}"
-            logger.debug(f"Photo URL: {photo_url}")
             send_photo(photo_url, message)
         except Exception as e:
-            logger.debug(f"Error: ${e}")
             send_message(NO_UNRECOGNIZED_FACES_MESSAGE, message)
         
         return {
@@ -80,7 +57,7 @@ def handle_message(message):
             for original in original_photos_with:
                 send_photo(f"{API_GW_URL}?original_photo={original}", message)
         else:
-            send_message(NO_PHOTOS_WITH.format(name), message)
+            send_message(f"{NO_PHOTOS_WITH} '{name}'", message)
         
         return {
             "statusCode": 200

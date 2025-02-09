@@ -3,11 +3,6 @@ from json import dumps
 from util.environment import MESSAGE_QUEUE_URL, ACCESS_KEY, SECRET_KEY
 from util.constants import SERVICE_NAME, ENDPOINT_URL, REGION_NAME
 
-"""
-Docs:
-    - [Yandex Cloud. Yandex Message Queue. boto3](https://yandex.cloud/en/docs/message-queue/instruments/python)
-"""
-
 def send_message_to_queue(message):
     client = boto3.client(
         service_name=SERVICE_NAME,

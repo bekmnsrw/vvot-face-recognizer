@@ -2,6 +2,7 @@ import base64
 from pathlib import Path
 from util.environment import PHOTOS_BUCKET, FACES_BUCKET
 from util.constants import STORAGE_PREFIX
+from util.constants import MISSING_PARAMETER_ERROR_MESSAGE, FILE_NOT_FOUND_ERROR_MESSAGE, ERORR_READING_FILE_ERROR_MESSAGE
 
 def handler(event, context):
     query_params = event.get('queryStringParameters', {})
@@ -12,7 +13,7 @@ def handler(event, context):
     if not face_id and not photo_id:
         return {
             'statusCode': 400,
-            'body': 'Missing query parameter: face or original_photo',
+            'body': MISSING_PARAMETER_ERROR_MESSAGE,
         }
 
     if face_id:
@@ -23,7 +24,7 @@ def handler(event, context):
     if not path.exists():
         return {
             'statusCode': 404,
-            'body': f'File not found: {path}',
+            'body': FILE_NOT_FOUND_ERROR_MESSAGE,
         }
     
     try:
@@ -32,7 +33,7 @@ def handler(event, context):
     except Exception as e:
         return {
             'statusCode': 500,
-            'body': f'Error reading file: {e}',
+            'body': ERORR_READING_FILE_ERROR_MESSAGE,
         }
 
     return {

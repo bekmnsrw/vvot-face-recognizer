@@ -1,11 +1,6 @@
 from requests import post
 from util.environment import TG_API_URL
 
-import logging
-
-logger = logging.getLogger('simple_example')
-logger.setLevel(logging.DEBUG)
-
 def send_message(text, message):
     url = f"{TG_API_URL}/sendMessage"
 
@@ -30,5 +25,4 @@ def send_photo(photo_url, message):
         },
     }
 
-    response = post(url=url, json=json)
-    logger.debug(f"send_photo: status code = {response.status_code}, text = {response.text}")
+    post(url=url, json=json)
