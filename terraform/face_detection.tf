@@ -54,8 +54,6 @@ resource "yandex_function" "face_detection_fun" {
 
 resource "yandex_storage_bucket" "photos_bucket" {
     bucket        = var.photos_bucket_name
-    access_key    = yandex_iam_service_account_static_access_key.sa_static_key.access_key
-    secret_key    = yandex_iam_service_account_static_access_key.sa_static_key.secret_key
     force_destroy = true
 }
 
