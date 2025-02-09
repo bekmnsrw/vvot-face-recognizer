@@ -1,7 +1,7 @@
 from json import loads
 from api.telegram import send_message, send_photo
 from util.constants import GET_FACE, FIND
-from util.constants import ERROR_MESSAGE, NO_UNRECOGNIZED_FACES_MESSAGE, NO_PHOTOS_WITH
+from util.constants import ERROR_MESSAGE, NO_UNRECOGNIZED_FACES_MESSAGE, NO_PHOTOS_WITH, INTERNAL_ERROR
 from util.environment import API_GW_URL
 from api.ydb import get_unrecognized_face_id, get_all_original_photos_with, save_name, get_processing_face_id, set_is_processing, get_db_session
 
@@ -42,7 +42,7 @@ def handle_message(message):
             save_name(db_session, text, face_id)
             set_is_processing(db_session, face_id, False)
         except Exception as e:
-            send_message("qwerty", message)
+            send_message(INTERNAL_ERROR, message)
 
         return {
             "statusCode": 200

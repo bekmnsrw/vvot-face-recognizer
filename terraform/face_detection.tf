@@ -31,7 +31,7 @@ resource "yandex_function" "face_detection_fun" {
     entrypoint         = "index.handler"
     runtime            = "python312"
     user_hash          = data.archive_file.face_detection.output_sha256
-    memory             = 128
+    memory             = 256
     execution_timeout  = 30
     service_account_id = yandex_iam_service_account.sa.id
     environment = {
